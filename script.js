@@ -106,7 +106,7 @@ const AlarmSound = (() => {
       for (const b of beeps) {
         if (t >= b.start && t < b.start + b.dur) {
           const freq = (t - b.start) < b.dur * 0.5 ? 880 : 1100;
-          sample = (Math.sin(2 * Math.PI * freq * t) >= 0 ? 1 : -1) * 0.5;
+          sample = (Math.sin(2 * Math.PI * freq * t) >= 0 ? 1 : -1) * 0.9;
           break;
         }
       }
@@ -135,21 +135,31 @@ const AlarmSound = (() => {
   }
 
   /**
-   * Play the alarm beep.
+   * Play the alarm beep in a continuous loop.
    * @param {number} volume  0-100
    */
   function play(volume) {
     ensureAudio();
     audioEl.volume = Math.max(0, Math.min(1, volume / 100));
+    audioEl.loop = true;
     audioEl.currentTime = 0;
     audioEl.play().catch(() => { console.warn("AlarmSound: playback blocked"); });
+  }
+
+  /** Stop the alarm sound and reset playback. */
+  function stop() {
+    if (audioEl) {
+      audioEl.pause();
+      audioEl.loop = false;
+      audioEl.currentTime = 0;
+    }
   }
 
   function setVolume(vol) {
     if (audioEl) audioEl.volume = Math.max(0, Math.min(1, vol / 100));
   }
 
-  return { play, setVolume, init };
+  return { play, stop, setVolume, init };
 })();
 
 
@@ -439,6 +449,7 @@ const TimerEngine = (() => {
     state         = "idle";
     remainingSec  = 0;
     totalSec      = 0;
+    AlarmSound.stop();
     UI.setTimerText(0);
     UI.setProgress(0);
     UI.hideFlash();
