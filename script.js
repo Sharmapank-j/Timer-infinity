@@ -65,18 +65,28 @@ const LiveClock = (() => {
    2. ALARM SOUND (HTML5 Audio + generated WAV)
 ═══════════════════════════════════════════════════════════ */
 const AlarmSound = (() => {
-  let beepUrl = null;
-  let audioEl = null;
+  let beepUrl      = null;
+  let audioEl      = null;
+  let builtForSec  = 0;      // duration the current WAV was built for
+  let stopTimeout  = null;   // auto-stop timer
+
+  /** Maximum WAV duration we ever generate (seconds). */
+  const MAX_WAV_SEC = 10;
+
+  /** Fallback buzz duration when none is specified (seconds). */
+  const DEFAULT_BUZZ_SEC = 8;
 
   /**
-   * Build an ~8-second alarm tone as a WAV blob URL.
+   * Build a WAV blob URL for a repeating beep tone of the given duration.
    * Repeating groups of three square-wave beeps (880 Hz → 1100 Hz),
    * each group ~0.71 s of beeps followed by ~0.29 s silence, repeating
-   * every 1 s across the full 8-second duration.
+   * every 1 s across the requested duration.
+   *
+   * @param {number} durationSec  Length of the WAV in seconds (clamped to MAX_WAV_SEC).
    */
-  function buildBeepUrl() {
+  function buildBeepUrl(durationSec) {
     const rate      = 8000;
-    const totalSec  = 8;                   // fixed buzz duration (seconds)
+    const totalSec  = Math.min(Math.max(1, durationSec), MAX_WAV_SEC);
     const groupLen  = 1.0;                 // 1 s per cycle (beeps + silence gap)
     const beepPattern = [
       { start: 0,    dur: 0.15 },
@@ -118,13 +128,27 @@ const AlarmSound = (() => {
       v.setInt16(44 + i * 2, sample * 32767 | 0, true);
     }
 
+    builtForSec = totalSec;
     return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
   }
 
-  /** Lazily create the blob URL and Audio element. */
-  function ensureAudio() {
-    if (!beepUrl) beepUrl = buildBeepUrl();
-    if (!audioEl) audioEl = new Audio(beepUrl);
+  /**
+   * Ensure the Audio element exists, rebuilding the WAV if the
+   * requested duration differs from the currently cached one.
+   * @param {number} [durationSec]  Desired buzz duration (default 8).
+   */
+  function ensureAudio(durationSec) {
+    const desired = Math.min(Math.max(1, durationSec || DEFAULT_BUZZ_SEC), MAX_WAV_SEC);
+    if (!beepUrl || desired !== builtForSec) {
+      // Clean up previous audio element if it exists
+      if (audioEl) {
+        audioEl.pause();
+        audioEl = null;
+      }
+      if (beepUrl) URL.revokeObjectURL(beepUrl);
+      beepUrl = buildBeepUrl(desired);
+      audioEl = new Audio(beepUrl);
+    }
   }
 
   /**
@@ -132,7 +156,7 @@ const AlarmSound = (() => {
    * audio playback on browsers that enforce autoplay restrictions.
    */
   function init() {
-    ensureAudio();
+    ensureAudio(MAX_WAV_SEC);
     audioEl.volume = 0.01;               // near-silent warm-up
     audioEl.play()
       .then(() => { audioEl.pause(); audioEl.currentTime = 0; })
@@ -140,19 +164,32 @@ const AlarmSound = (() => {
   }
 
   /**
-   * Play the alarm beep for its full duration (~8 s).
-   * @param {number} volume  0-100
+   * Play the alarm beep for the specified duration.
+   * The buzz length is tied to the repeat-interval so it never
+   * overlaps with the next scheduled alarm.
+   *
+   * @param {number} volume       0-100
+   * @param {number} durationSec  How long the buzz should play (seconds).
+   *                              Clamped to 1-10 s.
    */
-  function play(volume) {
-    ensureAudio();
+  function play(volume, durationSec) {
+    const dur = Math.min(Math.max(1, durationSec || DEFAULT_BUZZ_SEC), MAX_WAV_SEC);
+    ensureAudio(dur);
+    clearTimeout(stopTimeout);
     audioEl.volume = Math.max(0, Math.min(1, volume / 100));
     audioEl.loop = false;
     audioEl.currentTime = 0;
     audioEl.play().catch(() => { console.warn("AlarmSound: playback blocked"); });
+
+    // Auto-stop after the requested duration so the buzz never
+    // runs past the next repeat interval.
+    stopTimeout = setTimeout(() => stop(), dur * 1000);
   }
 
   /** Stop the alarm sound and reset playback. */
   function stop() {
+    clearTimeout(stopTimeout);
+    stopTimeout = null;
     if (audioEl) {
       audioEl.pause();
       audioEl.loop = false;
@@ -364,6 +401,19 @@ const TimerEngine = (() => {
   /** Fallback repeat delay (ms) when no interval is configured */
   const DEFAULT_REPEAT_INTERVAL_MS = 5000;
 
+  /** Default buzz duration when no interval is set (seconds) */
+  const DEFAULT_BUZZ_SEC = 8;
+
+  /**
+   * Calculate how long the buzzer should play (seconds).
+   * Capped at the repeat-interval so it never overlaps the next alarm,
+   * and clamped to the 1-10 s range.
+   */
+  function buzzDuration() {
+    if (intervalSec <= 0) return DEFAULT_BUZZ_SEC;
+    return Math.min(intervalSec, 10);
+  }
+
   let tickInterval  = null;
   let alarmInterval = null; // interval for repeat alarm
   let state         = "idle"; // 'idle' | 'running' | 'paused' | 'alarm'
@@ -391,7 +441,7 @@ const TimerEngine = (() => {
     Controls.setState("alarm");
     UI.showFlash();
 
-    if (soundEnabled) AlarmSound.play(volume);
+    if (soundEnabled) AlarmSound.play(volume, buzzDuration());
 
     // Schedule repeat alarms if configured
     if (isInfinite || repeatLeft > 0) {
@@ -406,7 +456,7 @@ const TimerEngine = (() => {
         stopAlarm();
         return;
       }
-      if (soundEnabled) AlarmSound.play(volume);
+      if (soundEnabled) AlarmSound.play(volume, buzzDuration());
       if (!isInfinite) repeatLeft--;
     }, delay);
   }
