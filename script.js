@@ -108,7 +108,16 @@ const AlarmSound = (() => {
     if (gainNode) gainNode.gain.setValueAtTime(vol / 100, audioCtx.currentTime);
   }
 
-  return { play, setVolume };
+  /** Pre-initialise the AudioContext during a user gesture (e.g. button click)
+   *  so it is already in "running" state when the alarm fires later. */
+  function init() {
+    const { ctx } = getCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => { /* browser denied resume – sound will be silent */ });
+    }
+  }
+
+  return { play, setVolume, init };
 })();
 
 
@@ -369,6 +378,10 @@ const TimerEngine = (() => {
       isInfinite   = s.isInfinite;
       soundEnabled = s.soundEnabled;
       volume       = s.volume;
+
+      // Initialise AudioContext now (during user-gesture) so the
+      // browser allows sound playback when the alarm fires later.
+      if (soundEnabled) AlarmSound.init();
 
       updateDisplay();
     }
