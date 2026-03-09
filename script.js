@@ -69,17 +69,21 @@ const AlarmSound = (() => {
   let audioEl = null;
 
   /**
-   * Build a short three-beep alarm tone as a WAV blob URL.
-   * Square-wave beeps: 880 Hz → 1100 Hz, ~0.75 s total.
+   * Build an ~8-second alarm tone as a WAV blob URL.
+   * Repeating groups of three square-wave beeps (880 Hz → 1100 Hz),
+   * each group ~0.71 s of beeps followed by ~0.29 s silence, repeating
+   * every 1 s across the full 8-second duration.
    */
   function buildBeepUrl() {
-    const rate = 8000;
-    const beeps = [
+    const rate      = 8000;
+    const totalSec  = 8;                   // fixed buzz duration (seconds)
+    const groupLen  = 1.0;                 // 1 s per cycle (beeps + silence gap)
+    const beepPattern = [
       { start: 0,    dur: 0.15 },
       { start: 0.23, dur: 0.15 },
       { start: 0.46, dur: 0.25 },
     ];
-    const len = Math.ceil(rate * 0.75);
+    const len = Math.ceil(rate * totalSec);
     const buf = new ArrayBuffer(44 + len * 2);
     const v   = new DataView(buf);
 
@@ -101,11 +105,12 @@ const AlarmSound = (() => {
 
     /* ---- PCM samples ---- */
     for (let i = 0; i < len; i++) {
-      const t = i / rate;
+      const t    = i / rate;
+      const tLocal = t % groupLen;         // position within current group
       let sample = 0;
-      for (const b of beeps) {
-        if (t >= b.start && t < b.start + b.dur) {
-          const freq = (t - b.start) < b.dur * 0.5 ? 880 : 1100;
+      for (const b of beepPattern) {
+        if (tLocal >= b.start && tLocal < b.start + b.dur) {
+          const freq = (tLocal - b.start) < b.dur * 0.5 ? 880 : 1100;
           sample = (Math.sin(2 * Math.PI * freq * t) >= 0 ? 1 : -1) * 0.9;
           break;
         }
@@ -135,13 +140,13 @@ const AlarmSound = (() => {
   }
 
   /**
-   * Play the alarm beep in a continuous loop.
+   * Play the alarm beep for its full duration (~8 s).
    * @param {number} volume  0-100
    */
   function play(volume) {
     ensureAudio();
     audioEl.volume = Math.max(0, Math.min(1, volume / 100));
-    audioEl.loop = true;
+    audioEl.loop = false;
     audioEl.currentTime = 0;
     audioEl.play().catch(() => { console.warn("AlarmSound: playback blocked"); });
   }
