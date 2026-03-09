@@ -62,59 +62,91 @@ const LiveClock = (() => {
 
 
 /* ═══════════════════════════════════════════════════════════
-   2. ALARM SOUND (Web Audio API)
+   2. ALARM SOUND (HTML5 Audio + generated WAV)
 ═══════════════════════════════════════════════════════════ */
 const AlarmSound = (() => {
-  let audioCtx = null;
-  let gainNode = null;
+  let beepUrl = null;
+  let audioEl = null;
 
-  function getCtx() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      gainNode = audioCtx.createGain();
-      gainNode.connect(audioCtx.destination);
+  /**
+   * Build a short three-beep alarm tone as a WAV blob URL.
+   * Square-wave beeps: 880 Hz → 1100 Hz, ~0.75 s total.
+   */
+  function buildBeepUrl() {
+    const rate = 8000;
+    const beeps = [
+      { start: 0,    dur: 0.15 },
+      { start: 0.23, dur: 0.15 },
+      { start: 0.46, dur: 0.25 },
+    ];
+    const len = Math.ceil(rate * 0.75);
+    const buf = new ArrayBuffer(44 + len * 2);
+    const v   = new DataView(buf);
+
+    function ws(o, s) {
+      for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
     }
-    return { ctx: audioCtx, gain: gainNode };
+
+    /* ---- RIFF / WAV header (44 bytes) ---- */
+    ws(0, "RIFF"); v.setUint32(4, 36 + len * 2, true);
+    ws(8, "WAVE"); ws(12, "fmt ");
+    v.setUint32(16, 16, true);            // sub-chunk size
+    v.setUint16(20, 1, true);             // PCM
+    v.setUint16(22, 1, true);             // mono
+    v.setUint32(24, rate, true);          // sample rate
+    v.setUint32(28, rate * 2, true);      // byte rate
+    v.setUint16(32, 2, true);             // block align
+    v.setUint16(34, 16, true);            // bits per sample
+    ws(36, "data"); v.setUint32(40, len * 2, true);
+
+    /* ---- PCM samples ---- */
+    for (let i = 0; i < len; i++) {
+      const t = i / rate;
+      let sample = 0;
+      for (const b of beeps) {
+        if (t >= b.start && t < b.start + b.dur) {
+          const freq = (t - b.start) < b.dur * 0.5 ? 880 : 1100;
+          sample = (Math.sin(2 * Math.PI * freq * t) >= 0 ? 1 : -1) * 0.5;
+          break;
+        }
+      }
+      v.setInt16(44 + i * 2, sample * 32767 | 0, true);
+    }
+
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+
+  /** Lazily create the blob URL and Audio element. */
+  function ensureAudio() {
+    if (!beepUrl) beepUrl = buildBeepUrl();
+    if (!audioEl) audioEl = new Audio(beepUrl);
   }
 
   /**
-   * Play a short beep sequence (alarm-like tone).
+   * Call during a user gesture (e.g. Start button click) to unlock
+   * audio playback on browsers that enforce autoplay restrictions.
+   */
+  function init() {
+    ensureAudio();
+    audioEl.volume = 0.01;               // near-silent warm-up
+    audioEl.play()
+      .then(() => { audioEl.pause(); audioEl.currentTime = 0; })
+      .catch(() => { console.warn("AlarmSound: browser blocked audio warm-up"); });
+  }
+
+  /**
+   * Play the alarm beep.
    * @param {number} volume  0-100
    */
   function play(volume) {
-    const { ctx, gain } = getCtx();
-
-    // Resume context if suspended (browser autoplay policy)
-    if (ctx.state === "suspended") ctx.resume();
-
-    gain.gain.setValueAtTime(volume / 100, ctx.currentTime);
-
-    // Three rapid beeps
-    const beepDurations = [0.15, 0.15, 0.25];
-    let offset = 0;
-    beepDurations.forEach((dur, i) => {
-      const osc = ctx.createOscillator();
-      osc.type = "square";
-      osc.frequency.setValueAtTime(880, ctx.currentTime + offset);
-      osc.frequency.setValueAtTime(1100, ctx.currentTime + offset + dur * 0.5);
-      osc.connect(gain);
-      osc.start(ctx.currentTime + offset);
-      osc.stop(ctx.currentTime + offset + dur);
-      offset += dur + 0.08;
-    });
+    ensureAudio();
+    audioEl.volume = Math.max(0, Math.min(1, volume / 100));
+    audioEl.currentTime = 0;
+    audioEl.play().catch(() => { console.warn("AlarmSound: playback blocked"); });
   }
 
   function setVolume(vol) {
-    if (gainNode) gainNode.gain.setValueAtTime(vol / 100, audioCtx.currentTime);
-  }
-
-  /** Pre-initialise the AudioContext during a user gesture (e.g. button click)
-   *  so it is already in "running" state when the alarm fires later. */
-  function init() {
-    const { ctx } = getCtx();
-    if (ctx.state === "suspended") {
-      ctx.resume().catch(() => { /* browser denied resume – sound will be silent */ });
-    }
+    if (audioEl) audioEl.volume = Math.max(0, Math.min(1, vol / 100));
   }
 
   return { play, setVolume, init };
