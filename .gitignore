@@ -1,0 +1,29 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor / IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Node (if ever added)
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Build artifacts
+dist/
+build/
+*.map
+
+# Environment files
+.env
+.env.local
