@@ -65,23 +65,29 @@ const LiveClock = (() => {
    2. ALARM SOUND (HTML5 Audio + generated WAV)
 ═══════════════════════════════════════════════════════════ */
 const AlarmSound = (() => {
-  let beepUrl = null;
-  let audioEl = null;
+  let beepUrl     = null;
+  let audioEl     = null;
+  let currentDur  = 0;    // duration (seconds) the current WAV was built for
+  let stopTimeout = null; // handle for the auto-stop timer
 
   /**
-   * Build a short three-beep alarm tone as a WAV blob URL.
-   * Square-wave beeps: 880 Hz → 1100 Hz, ~0.75 s total.
+   * Build a repeating three-beep alarm tone as a WAV blob URL.
+   * Each beep group is ~0.75 s; groups are repeated to fill `durationSec`.
+   * Square-wave beeps: 880 Hz → 1100 Hz.
+   * @param {number} durationSec  Clamped to 1–10 seconds.
    */
-  function buildBeepUrl() {
-    const rate = 8000;
-    const beeps = [
+  function buildBeepUrl(durationSec) {
+    const rate      = 8000;
+    const groupDur  = 0.75; // seconds per beep group
+    const beepDefs  = [
       { start: 0,    dur: 0.15 },
       { start: 0.23, dur: 0.15 },
       { start: 0.46, dur: 0.25 },
     ];
-    const len = Math.ceil(rate * 0.75);
-    const buf = new ArrayBuffer(44 + len * 2);
-    const v   = new DataView(buf);
+    const totalSec = Math.max(1, Math.min(10, durationSec));
+    const len      = Math.ceil(rate * totalSec);
+    const buf      = new ArrayBuffer(44 + len * 2);
+    const v        = new DataView(buf);
 
     function ws(o, s) {
       for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
@@ -99,13 +105,14 @@ const AlarmSound = (() => {
     v.setUint16(34, 16, true);            // bits per sample
     ws(36, "data"); v.setUint32(40, len * 2, true);
 
-    /* ---- PCM samples ---- */
+    /* ---- PCM samples: repeat beep groups across the full duration ---- */
     for (let i = 0; i < len; i++) {
-      const t = i / rate;
-      let sample = 0;
-      for (const b of beeps) {
-        if (t >= b.start && t < b.start + b.dur) {
-          const freq = (t - b.start) < b.dur * 0.5 ? 880 : 1100;
+      const t      = i / rate;
+      const tInGrp = t % groupDur; // position within the current beep group
+      let sample   = 0;
+      for (const b of beepDefs) {
+        if (tInGrp >= b.start && tInGrp < b.start + b.dur) {
+          const freq = (tInGrp - b.start) < b.dur * 0.5 ? 880 : 1100;
           sample = (Math.sin(2 * Math.PI * freq * t) >= 0 ? 1 : -1) * 0.5;
           break;
         }
@@ -116,10 +123,25 @@ const AlarmSound = (() => {
     return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
   }
 
-  /** Lazily create the blob URL and Audio element. */
-  function ensureAudio() {
-    if (!beepUrl) beepUrl = buildBeepUrl();
-    if (!audioEl) audioEl = new Audio(beepUrl);
+  /**
+   * Lazily create (or recreate when duration changes) the blob URL and
+   * Audio element.
+   * @param {number} durationSec
+   */
+  function ensureAudio(durationSec) {
+    const clamped = Math.max(1, Math.min(10, durationSec));
+    if (clamped !== currentDur || !beepUrl || !audioEl) {
+      // Clean up old resources before rebuilding
+      if (audioEl) {
+        audioEl.pause();
+        audioEl.src = "";
+      }
+      if (beepUrl) URL.revokeObjectURL(beepUrl);
+
+      beepUrl    = buildBeepUrl(clamped);
+      audioEl    = new Audio(beepUrl);
+      currentDur = clamped;
+    }
   }
 
   /**
@@ -127,7 +149,7 @@ const AlarmSound = (() => {
    * audio playback on browsers that enforce autoplay restrictions.
    */
   function init() {
-    ensureAudio();
+    ensureAudio(8);
     audioEl.volume = 0.01;               // near-silent warm-up
     audioEl.play()
       .then(() => { audioEl.pause(); audioEl.currentTime = 0; })
@@ -135,21 +157,39 @@ const AlarmSound = (() => {
   }
 
   /**
-   * Play the alarm beep.
-   * @param {number} volume  0-100
+   * Play the alarm beep for the given duration, then auto-stop.
+   * @param {number} volume      0–100
+   * @param {number} durationSec 1–10 (seconds the buzzer should be heard)
    */
-  function play(volume) {
-    ensureAudio();
-    audioEl.volume = Math.max(0, Math.min(1, volume / 100));
+  function play(volume, durationSec) {
+    const dur = Math.max(1, Math.min(10, durationSec || 8));
+    ensureAudio(dur);
+
+    // Cancel any previous auto-stop
+    clearTimeout(stopTimeout);
+
+    audioEl.volume      = Math.max(0, Math.min(1, volume / 100));
     audioEl.currentTime = 0;
     audioEl.play().catch(() => { console.warn("AlarmSound: playback blocked"); });
+
+    // Auto-stop after the buzzer duration to prevent overlap with the next cycle
+    stopTimeout = setTimeout(() => stop(), dur * 1000);
+  }
+
+  function stop() {
+    clearTimeout(stopTimeout);
+    stopTimeout = null;
+    if (audioEl) {
+      audioEl.pause();
+      audioEl.currentTime = 0;
+    }
   }
 
   function setVolume(vol) {
     if (audioEl) audioEl.volume = Math.max(0, Math.min(1, vol / 100));
   }
 
-  return { play, setVolume, init };
+  return { play, stop, setVolume, init };
 })();
 
 
@@ -370,13 +410,24 @@ const TimerEngine = (() => {
     }
   }
 
+  /**
+   * Compute how long (seconds) the buzzer should sound.
+   * Capped at min(intervalSec, 10) so the beep never bleeds into the
+   * next repeat cycle. Falls back to 8 s when no interval is configured.
+   */
+  function buzzDuration() {
+    const ivSec = Math.max(0, intervalSec);
+    if (ivSec > 0) return Math.min(ivSec, 10);
+    return 8;
+  }
+
   /** Called when countdown hits zero */
   function onAlarmTriggered() {
     state = "alarm";
     Controls.setState("alarm");
     UI.showFlash();
 
-    if (soundEnabled) AlarmSound.play(volume);
+    if (soundEnabled) AlarmSound.play(volume, buzzDuration());
 
     // Schedule repeat alarms if configured
     if (isInfinite || repeatLeft > 0) {
@@ -391,7 +442,7 @@ const TimerEngine = (() => {
         stopAlarm();
         return;
       }
-      if (soundEnabled) AlarmSound.play(volume);
+      if (soundEnabled) AlarmSound.play(volume, buzzDuration());
       if (!isInfinite) repeatLeft--;
     }, delay);
   }
@@ -448,6 +499,7 @@ const TimerEngine = (() => {
   function stopAlarm() {
     clearInterval(alarmInterval);
     alarmInterval = null;
+    AlarmSound.stop();
     UI.hideFlash();
     reset();
   }

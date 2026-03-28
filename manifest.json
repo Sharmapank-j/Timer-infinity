@@ -1,0 +1,17 @@
+{
+  "name": "Timer Infinity",
+  "short_name": "Timer ♾️",
+  "description": "A repeating countdown timer with dynamic alarm buzzer.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#7c6af0",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
