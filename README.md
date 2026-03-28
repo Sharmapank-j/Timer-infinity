@@ -1,14 +1,12 @@
-# Timer Infinity ♾️
+# Timer ♾️
 
-A repeating countdown timer with a dynamic alarm buzzer — available as a Progressive Web App.
+A simple countdown timer with a selectable buzzer duration and periodic repeat interval — available as a Progressive Web App.
 
 ## Features
 
-- **Countdown timer** — set any duration in hours, minutes and seconds (up to 23h 59m 59s).
-- **User-defined buzzer duration** — choose exactly how long the alarm beeps (1–60 seconds). The duration is automatically capped to the repeat interval to prevent overlap.
-- **Repeat alarms** — ring a set number of times or loop infinitely.
-- **Adjustable volume** — live volume slider (0–100 %).
-- **Live clock** — displays current time with animated second dots.
+- **Countdown timer** — set any duration in hours, minutes and seconds (up to 23 h 59 m 59 s).
+- **Beep Duration** — choose exactly how long the buzzer sounds each time it fires (1–60 seconds).
+- **Repeat Interval** — buzzer re-fires every N minutes/seconds during the countdown. Set to 0 for a single buzz at the end only.
 - **PWA support** — install on desktop or mobile; works offline via a cache-first service worker.
 - **Keyboard shortcuts** — `Space` to start/pause, `R` to reset.
 - **Settings persistence** — configuration is saved to `localStorage`.
@@ -16,13 +14,12 @@ A repeating countdown timer with a dynamic alarm buzzer — available as a Progr
 ## Usage
 
 1. Open `index.html` in a modern browser (or install as a PWA).
-2. Set the **Timer Duration** in hours, minutes and seconds.
-3. Set the **Repeat Interval** (how often the buzzer re-rings after the first alarm).
-4. Choose a **Repeat Count** or toggle **Infinite**.
-5. Enable **Alarm Sound**, adjust the volume, and set the **Buzzer Duration** (how long the beep sounds each time, 1–60 s).
-6. Click **▶ Start** (or press `Space`).
+2. Set the **Timer Duration** in hours, minutes and seconds (e.g. 60 min).
+3. Set the **Beep Duration** — how long each buzz lasts (e.g. 10 sec).
+4. Set the **Repeat Interval** — how often the buzzer fires during the countdown (e.g. every 2 min). Set both fields to 0 to buzz only when the timer finishes.
+5. Click **▶ Start** (or press `Space`).
 
-The buzzer sounds for the configured duration each time it fires, automatically stopping before the next repeat cycle.
+The buzzer fires automatically at each interval and again when the timer reaches zero, sounding for the configured beep duration before stopping.
 
 ## Project Structure
 
@@ -30,7 +27,7 @@ The buzzer sounds for the configured duration each time it fires, automatically 
 Timer-infinity/
 ├── index.html      # App shell + PWA wiring
 ├── style.css       # Styles
-├── script.js       # Timer logic (LiveClock, TimerEngine, AlarmSound, …)
+├── script.js       # Timer logic (Buzzer, TimerEngine, UI, Settings)
 ├── manifest.json   # PWA manifest
 ├── sw.js           # Service worker (cache-first)
 ├── favicon.svg     # App icon

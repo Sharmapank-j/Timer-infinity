@@ -1,12 +1,9 @@
 /* ═══════════════════════════════════════════════════════════
-   Timer Infinity – style.css
-   Dark-mode-first, responsive, minimal UI
+   Timer – style.css  (simple dark theme, single-column)
 ═══════════════════════════════════════════════════════════ */
 
-/* ── CSS Custom Properties ─────────────────────────────── */
 :root {
   --bg:           #0d0d14;
-  --bg-panel:     #13131f;
   --bg-card:      #1a1a2e;
   --border:       #2a2a44;
   --accent:       #6c63ff;
@@ -14,148 +11,53 @@
   --accent-light: #a09af8;
   --danger:       #e05c5c;
   --danger-hover: #c94444;
-  --success:      #4ecb71;
   --muted:        #555577;
   --text:         #e8e8f8;
   --text-dim:     #9999bb;
-  --clock-color:  #a09af8;
   --font-mono:    "Courier New", Courier, monospace;
   --radius:       12px;
   --transition:   0.25s ease;
 }
 
-/* ── Reset / Base ───────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
   background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  overflow-x: hidden;
 }
 
-/* ── Layout: split screen ───────────────────────────────── */
+/* ── Centred single-column container ── */
 .container {
-  display: flex;
-  flex-direction: row;
-  min-height: 100vh;
-}
-
-.panel {
-  flex: 1 1 50%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 3rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
-}
-
-/* ── LEFT PANEL – Clock ─────────────────────────────────── */
-.panel-clock {
-  background: var(--bg-panel);
-  border-right: 1px solid var(--border);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Subtle radial glow behind the clock */
-.panel-clock::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at center, rgba(108, 99, 255, 0.10) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.clock-wrapper {
-  text-align: center;
-  z-index: 1;
-}
-
-.clock-label {
-  font-size: 0.85rem;
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 0.75rem;
-}
-
-.clock {
-  font-family: var(--font-mono);
-  font-size: clamp(3rem, 8vw, 6rem);
-  color: var(--clock-color);
-  letter-spacing: 0.05em;
-  text-shadow: 0 0 30px rgba(160, 154, 248, 0.5);
-  transition: color var(--transition);
-  /* Slight pulsing on each second is handled by JS toggling a class */
-}
-
-.clock.tick {
-  text-shadow: 0 0 50px rgba(160, 154, 248, 0.9);
-}
-
-/* Animated seconds indicator dots */
-.seconds-dots {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 1rem;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.dot.active {
-  background: var(--accent-light);
-  transform: scale(1.4);
-}
-
-.clock-date {
-  margin-top: 1rem;
-  font-size: 0.95rem;
-  color: var(--text-dim);
-  letter-spacing: 0.05em;
-}
-
-/* ── RIGHT PANEL – Timer ────────────────────────────────── */
-.panel-timer {
-  background: var(--bg);
   align-items: stretch;
-  max-width: 600px;
-  margin: 0 auto;
+  gap: 1rem;
 }
 
+/* ── Title ── */
 .app-title {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--accent-light);
-  margin-bottom: 1.25rem;
   text-align: center;
   letter-spacing: 0.03em;
 }
 
-/* ── Progress bar ───────────────────────────────────────── */
+/* ── Progress bar ── */
 .progress-track {
   width: 100%;
   height: 6px;
   background: var(--border);
   border-radius: 99px;
   overflow: hidden;
-  margin-bottom: 0.75rem;
 }
-
 .progress-bar {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--accent-light));
@@ -163,33 +65,38 @@ html, body {
   transition: width 1s linear;
 }
 
-/* ── Timer countdown display ────────────────────────────── */
+/* ── Countdown display ── */
 .timer-display {
   font-family: var(--font-mono);
-  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-size: clamp(3rem, 14vw, 5.5rem);
   text-align: center;
   color: var(--text);
-  margin-bottom: 1.5rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   transition: color var(--transition);
 }
-
-.timer-display.alarm-active {
-  animation: alarm-flash 0.5s infinite alternate;
+.timer-display.buzzing {
+  animation: buzz-flash 0.5s infinite alternate;
 }
-
-@keyframes alarm-flash {
+@keyframes buzz-flash {
   from { color: var(--text); }
   to   { color: var(--danger); }
 }
 
-/* ── Settings form ──────────────────────────────────────── */
+/* ── Status label ── */
+.status-label {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  min-height: 1.2em;
+}
+
+/* ── Settings form ── */
 .settings-form {
-  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  margin-bottom: 1.25rem;
+  gap: 0.75rem;
 }
 
 .fieldset {
@@ -198,9 +105,8 @@ html, body {
   padding: 0.8rem 1rem;
   background: var(--bg-card);
 }
-
 .fieldset legend {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -212,10 +118,9 @@ html, body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
+  gap: 0.45rem 0.65rem;
   margin-top: 0.5rem;
 }
-
 .input-row label {
   font-size: 0.8rem;
   color: var(--text-dim);
@@ -223,10 +128,15 @@ html, body {
 }
 
 .sep {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   color: var(--muted);
   font-weight: 700;
   line-height: 1;
+}
+
+.hint-text {
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 /* Number inputs */
@@ -241,110 +151,28 @@ html, body {
   font-family: var(--font-mono);
   text-align: center;
   transition: border-color var(--transition), box-shadow var(--transition);
-  appearance: textfield; /* hide number spinners across browsers */
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 .num-input::-webkit-inner-spin-button,
 .num-input::-webkit-outer-spin-button { -webkit-appearance: none; }
-
 .num-input:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.25);
 }
-
 .num-input.wide { width: 90px; }
 
-/* Checkbox toggle */
-.toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.toggle-label input[type="checkbox"] {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.toggle-text {
-  font-size: 0.85rem;
-  color: var(--text);
-}
-
-.space-between {
-  justify-content: space-between;
-}
-
-/* Volume row */
-.volume-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.volume-row input[type="range"] {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 110px;
-  height: 4px;
-  background: var(--border);
-  border-radius: 99px;
-  outline: none;
-  cursor: pointer;
-}
-
-.volume-row input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-  transition: background var(--transition), transform var(--transition);
-}
-
-.volume-row input[type="range"]::-webkit-slider-thumb:hover {
-  background: var(--accent-hover);
-  transform: scale(1.2);
-}
-
-.volume-row input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: none;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-}
-
-#volume-val {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  min-width: 34px;
-}
-
-.hint-text {
-  font-size: 0.8rem;
-  color: var(--text-dim);
-}
-
-/* ── Control Buttons ────────────────────────────────────── */
+/* ── Buttons ── */
 .controls {
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 0.9rem;
 }
 
 .btn {
-  padding: 0.55rem 1.1rem;
+  padding: 0.6rem 1.25rem;
   border: none;
   border-radius: 8px;
   font-size: 0.9rem;
@@ -353,60 +181,38 @@ html, body {
   transition: background var(--transition), transform 0.1s, opacity var(--transition);
   outline: none;
 }
+.btn:focus-visible { outline: 2px solid var(--accent-light); outline-offset: 2px; }
+.btn:active:not(:disabled) { transform: scale(0.96); }
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-.btn:focus-visible {
-  outline: 2px solid var(--accent-light);
-  outline-offset: 2px;
-}
+.btn-primary  { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled)   { background: var(--accent-hover); }
 
-.btn:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: #fff;
-}
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-
-.btn-secondary {
-  background: var(--bg-card);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
+.btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
 .btn-secondary:hover:not(:disabled) { background: var(--border); }
 
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-}
-.btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
+.btn-danger   { background: var(--danger); color: #fff; }
+.btn-danger:hover:not(:disabled)    { background: var(--danger-hover); }
 
-/* ── Keyboard shortcuts hint ────────────────────────────── */
+/* ── Keyboard hint ── */
 .shortcuts-hint {
-  font-size: 0.73rem;
+  font-size: 0.72rem;
   color: var(--muted);
   text-align: center;
 }
-
 kbd {
   display: inline-block;
   padding: 1px 5px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   font-family: var(--font-mono);
   background: var(--bg-card);
   color: var(--text-dim);
 }
 
-/* ── Flash overlay ──────────────────────────────────────── */
-.flash-overlay {
+/* ── Buzz overlay ── */
+.buzz-overlay {
   position: fixed;
   inset: 0;
   z-index: 999;
@@ -414,51 +220,24 @@ kbd {
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  animation: flash-anim 0.4s infinite alternate;
+  animation: overlay-flash 0.4s infinite alternate;
 }
-
-.flash-overlay span {
+.buzz-overlay span {
   font-size: clamp(2rem, 8vw, 5rem);
   font-weight: 900;
   color: #fff;
   text-shadow: 0 0 40px var(--danger);
   letter-spacing: 0.05em;
 }
-
-@keyframes flash-anim {
+@keyframes overlay-flash {
   from { background: rgba(224, 92, 92, 0.0); }
-  to   { background: rgba(224, 92, 92, 0.25); }
+  to   { background: rgba(224, 92, 92, 0.22); }
 }
 
 .hidden { display: none !important; }
 
-/* ── Responsive – stack panels on mobile ───────────────── */
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
-
-  .panel {
-    flex: none;
-    width: 100%;
-    border-right: none;
-  }
-
-  .panel-clock {
-    padding: 2rem 1rem;
-    border-bottom: 1px solid var(--border);
-    min-height: 220px;
-  }
-
-  .clock {
-    font-size: clamp(2.5rem, 14vw, 4.5rem);
-  }
-
-  .panel-timer {
-    padding: 1.5rem 1rem 2rem;
-  }
-
-  .volume-row input[type="range"] {
-    width: 80px;
-  }
+/* ── Mobile ── */
+@media (max-width: 520px) {
+  .container { padding: 1.5rem 1rem 2.5rem; }
+  .timer-display { font-size: clamp(2.8rem, 18vw, 4rem); }
 }

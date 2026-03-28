@@ -3,155 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="A repeating countdown timer with a dynamic alarm buzzer." />
-  <meta name="theme-color" content="#7c6af0" />
-  <title>Timer Infinity ♾️</title>
+  <meta name="description" content="Simple countdown timer with selectable beep duration and repeat interval." />
+  <meta name="theme-color" content="#6c63ff" />
+  <title>Timer ♾️</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Flash overlay shown when the alarm triggers -->
-  <div id="flash-overlay" class="flash-overlay hidden" aria-live="assertive" aria-atomic="true">
-    <span>⏰ ALARM!</span>
+  <!-- Buzzing overlay -->
+  <div id="buzz-overlay" class="buzz-overlay hidden" aria-live="assertive" aria-atomic="true">
+    <span>🔔 BUZZ!</span>
   </div>
 
   <div class="container">
 
-    <!-- ════════════════════════════════════════
-         LEFT PANEL – Live Clock
-    ════════════════════════════════════════ -->
-    <section class="panel panel-clock" aria-label="Live clock">
-      <div class="clock-wrapper">
-        <div class="clock-label">Current Time</div>
-        <div id="clock" class="clock" aria-live="polite">00:00:00</div>
-        <!-- Animated seconds dots -->
-        <div class="seconds-dots" aria-hidden="true">
-          <span id="dot1" class="dot"></span>
-          <span id="dot2" class="dot"></span>
-          <span id="dot3" class="dot"></span>
-          <span id="dot4" class="dot"></span>
-          <span id="dot5" class="dot"></span>
+    <h1 class="app-title">Timer <span aria-hidden="true">♾️</span></h1>
+
+    <!-- Progress bar -->
+    <div class="progress-track" aria-label="Timer progress">
+      <div id="progress-bar" class="progress-bar" style="width:0%"></div>
+    </div>
+
+    <!-- Countdown display -->
+    <div id="timer-display" class="timer-display" aria-live="polite">00:00:00</div>
+
+    <!-- Status label -->
+    <div id="status-label" class="status-label">Ready</div>
+
+    <!-- Settings form -->
+    <form id="settings-form" class="settings-form" novalidate>
+
+      <!-- 1. Timer Duration -->
+      <fieldset class="fieldset">
+        <legend>Timer Duration</legend>
+        <div class="input-row">
+          <label for="dur-hr">Hr</label>
+          <input id="dur-hr" class="num-input" type="number"
+                 min="0" max="23" value="0" placeholder="hh"
+                 aria-label="Duration hours" />
+          <span class="sep">:</span>
+          <label for="dur-min">Min</label>
+          <input id="dur-min" class="num-input" type="number"
+                 min="0" max="59" value="1" placeholder="mm"
+                 aria-label="Duration minutes" />
+          <span class="sep">:</span>
+          <label for="dur-sec">Sec</label>
+          <input id="dur-sec" class="num-input" type="number"
+                 min="0" max="59" value="0" placeholder="ss"
+                 aria-label="Duration seconds" />
         </div>
-        <div id="clock-date" class="clock-date"></div>
-      </div>
-    </section>
+      </fieldset>
 
-    <!-- ════════════════════════════════════════
-         RIGHT PANEL – Timer Settings
-    ════════════════════════════════════════ -->
-    <section class="panel panel-timer" aria-label="Timer settings">
+      <!-- 2. Beep Duration -->
+      <fieldset class="fieldset">
+        <legend>Beep Duration</legend>
+        <div class="input-row">
+          <label for="beep-dur">Seconds</label>
+          <input id="beep-dur" class="num-input wide" type="number"
+                 min="1" max="60" value="10"
+                 aria-label="Beep duration seconds" />
+          <span class="hint-text">sec (1–60)</span>
+        </div>
+      </fieldset>
 
-      <h1 class="app-title">Timer Infinity <span aria-hidden="true">♾️</span></h1>
+      <!-- 3. Repeat Interval -->
+      <fieldset class="fieldset">
+        <legend>Repeat Interval</legend>
+        <div class="input-row">
+          <label for="int-min">Min</label>
+          <input id="int-min" class="num-input" type="number"
+                 min="0" max="99" value="2" placeholder="mm"
+                 aria-label="Interval minutes" />
+          <span class="sep">:</span>
+          <label for="int-sec">Sec</label>
+          <input id="int-sec" class="num-input" type="number"
+                 min="0" max="59" value="0" placeholder="ss"
+                 aria-label="Interval seconds" />
+          <span class="hint-text">(0 = buzz once at end only)</span>
+        </div>
+      </fieldset>
 
-      <!-- ── Progress bar ── -->
-      <div class="progress-track" aria-label="Timer progress">
-        <div id="progress-bar" class="progress-bar" style="width:0%"></div>
-      </div>
+    </form>
 
-      <!-- ── Countdown display ── -->
-      <div id="timer-display" class="timer-display" aria-live="polite">00:00</div>
+    <!-- Control Buttons -->
+    <div class="controls" role="group" aria-label="Timer controls">
+      <button id="btn-start" class="btn btn-primary"   title="Start (Space)">▶ Start</button>
+      <button id="btn-pause" class="btn btn-secondary" title="Pause (Space)" disabled>⏸ Pause</button>
+      <button id="btn-reset" class="btn btn-secondary" title="Reset (R)"     disabled>↺ Reset</button>
+      <button id="btn-stop"  class="btn btn-danger"    title="Stop Buzzer"   disabled>✕ Stop Buzzer</button>
+    </div>
 
-      <!-- ══════════ Configuration Form ══════════ -->
-      <form id="settings-form" class="settings-form" novalidate>
-
-        <!-- 1. Timer Duration -->
-        <fieldset class="fieldset">
-          <legend>Timer Duration</legend>
-          <div class="input-row">
-            <label for="dur-hr">Hours</label>
-            <input id="dur-hr" class="num-input" type="number"
-                   min="0" max="23" value="0" placeholder="hh"
-                   aria-label="Duration hours" />
-            <span class="sep">:</span>
-            <label for="dur-min">Minutes</label>
-            <input id="dur-min" class="num-input" type="number"
-                   min="0" max="59" value="5" placeholder="mm"
-                   aria-label="Duration minutes" />
-            <span class="sep">:</span>
-            <label for="dur-sec">Seconds</label>
-            <input id="dur-sec" class="num-input" type="number"
-                   min="0" max="59" value="0" placeholder="ss"
-                   aria-label="Duration seconds" />
-          </div>
-        </fieldset>
-
-        <!-- 2. Repeat Interval -->
-        <fieldset class="fieldset">
-          <legend>Repeat Interval</legend>
-          <div class="input-row">
-            <label for="rep-min">Minutes</label>
-            <input id="rep-min" class="num-input" type="number"
-                   min="0" max="99" value="1" placeholder="mm"
-                   aria-label="Repeat interval minutes" />
-            <span class="sep">:</span>
-            <label for="rep-sec">Seconds</label>
-            <input id="rep-sec" class="num-input" type="number"
-                   min="0" max="59" value="0" placeholder="ss"
-                   aria-label="Repeat interval seconds" />
-          </div>
-        </fieldset>
-
-        <!-- 3. Number of Repeats -->
-        <fieldset class="fieldset">
-          <legend>Number of Repeats</legend>
-          <div class="input-row">
-            <label for="repeat-count">Count</label>
-            <input id="repeat-count" class="num-input wide" type="number"
-                   min="1" max="9999" value="3"
-                   aria-label="Repeat count" />
-            <label class="toggle-label">
-              <input id="infinite-repeat" type="checkbox" />
-              <span class="toggle-text">Infinite</span>
-            </label>
-          </div>
-        </fieldset>
-
-        <!-- 4 & 5. Sound Toggle + Volume -->
-        <fieldset class="fieldset">
-          <legend>Alarm Sound</legend>
-          <div class="input-row space-between">
-            <label class="toggle-label">
-              <input id="sound-enabled" type="checkbox" checked />
-              <span class="toggle-text">Enable Sound</span>
-            </label>
-            <div class="volume-row">
-              <label for="volume">🔊</label>
-              <input id="volume" type="range" min="0" max="100" value="70"
-                     aria-label="Volume" />
-              <span id="volume-val">70%</span>
-            </div>
-          </div>
-        </fieldset>
-
-        <!-- 6. Buzzer Duration -->
-        <fieldset class="fieldset">
-          <legend>Buzzer Duration</legend>
-          <div class="input-row">
-            <label for="buzz-dur">Seconds</label>
-            <input id="buzz-dur" class="num-input wide" type="number"
-                   min="1" max="60" value="8"
-                   aria-label="Buzzer duration seconds" />
-            <span class="hint-text">sec (1–60)</span>
-          </div>
-        </fieldset>
-
-      </form><!-- /settings-form -->
-
-      <!-- ══════════ Control Buttons ══════════ -->
-      <div class="controls" role="group" aria-label="Timer controls">
-        <button id="btn-start"  class="btn btn-primary"   title="Start (Space)">▶ Start</button>
-        <button id="btn-pause"  class="btn btn-secondary" title="Pause (Space)" disabled>⏸ Pause</button>
-        <button id="btn-reset"  class="btn btn-secondary" title="Reset (R)" disabled>↺ Reset</button>
-        <button id="btn-stop"   class="btn btn-danger"    title="Stop Alarm" disabled>✕ Stop Alarm</button>
-      </div>
-
-      <p class="shortcuts-hint" aria-label="Keyboard shortcuts">
-        <kbd>Space</kbd> Start / Pause &nbsp;|&nbsp; <kbd>R</kbd> Reset
-      </p>
-
-    </section><!-- /panel-timer -->
+    <p class="shortcuts-hint" aria-label="Keyboard shortcuts">
+      <kbd>Space</kbd> Start / Pause &nbsp;|&nbsp; <kbd>R</kbd> Reset
+    </p>
 
   </div><!-- /container -->
 
