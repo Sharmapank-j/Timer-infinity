@@ -4,8 +4,8 @@ A repeating countdown timer with a dynamic alarm buzzer — available as a Progr
 
 ## Features
 
-- **Countdown timer** — set any duration in minutes and seconds.
-- **Dynamic buzzer duration** — the beep length is automatically capped to the repeat interval (up to 10 seconds), so the alarm never bleeds into the next cycle.
+- **Countdown timer** — set any duration in hours, minutes and seconds (up to 23h 59m 59s).
+- **User-defined buzzer duration** — choose exactly how long the alarm beeps (1–60 seconds). The duration is automatically capped to the repeat interval to prevent overlap.
 - **Repeat alarms** — ring a set number of times or loop infinitely.
 - **Adjustable volume** — live volume slider (0–100 %).
 - **Live clock** — displays current time with animated second dots.
@@ -16,14 +16,13 @@ A repeating countdown timer with a dynamic alarm buzzer — available as a Progr
 ## Usage
 
 1. Open `index.html` in a modern browser (or install as a PWA).
-2. Set the **Timer Duration** (countdown length).
+2. Set the **Timer Duration** in hours, minutes and seconds.
 3. Set the **Repeat Interval** (how often the buzzer re-rings after the first alarm).
 4. Choose a **Repeat Count** or toggle **Infinite**.
-5. Enable **Alarm Sound** and adjust the volume.
+5. Enable **Alarm Sound**, adjust the volume, and set the **Buzzer Duration** (how long the beep sounds each time, 1–60 s).
 6. Click **▶ Start** (or press `Space`).
 
-The buzzer will sound for `min(intervalSeconds, 10)` seconds each time it fires,
-defaulting to 8 seconds when no repeat interval is configured.
+The buzzer sounds for the configured duration each time it fires, automatically stopping before the next repeat cycle.
 
 ## Project Structure
 

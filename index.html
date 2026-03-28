@@ -60,9 +60,14 @@
         <fieldset class="fieldset">
           <legend>Timer Duration</legend>
           <div class="input-row">
+            <label for="dur-hr">Hours</label>
+            <input id="dur-hr" class="num-input" type="number"
+                   min="0" max="23" value="0" placeholder="hh"
+                   aria-label="Duration hours" />
+            <span class="sep">:</span>
             <label for="dur-min">Minutes</label>
             <input id="dur-min" class="num-input" type="number"
-                   min="0" max="99" value="5" placeholder="mm"
+                   min="0" max="59" value="5" placeholder="mm"
                    aria-label="Duration minutes" />
             <span class="sep">:</span>
             <label for="dur-sec">Seconds</label>
@@ -117,6 +122,18 @@
                      aria-label="Volume" />
               <span id="volume-val">70%</span>
             </div>
+          </div>
+        </fieldset>
+
+        <!-- 6. Buzzer Duration -->
+        <fieldset class="fieldset">
+          <legend>Buzzer Duration</legend>
+          <div class="input-row">
+            <label for="buzz-dur">Seconds</label>
+            <input id="buzz-dur" class="num-input wide" type="number"
+                   min="1" max="60" value="8"
+                   aria-label="Buzzer duration seconds" />
+            <span class="hint-text">sec (1–60)</span>
           </div>
         </fieldset>
 

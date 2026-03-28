@@ -74,7 +74,7 @@ const AlarmSound = (() => {
    * Build a repeating three-beep alarm tone as a WAV blob URL.
    * Each beep group is ~0.75 s; groups are repeated to fill `durationSec`.
    * Square-wave beeps: 880 Hz → 1100 Hz.
-   * @param {number} durationSec  Clamped to 1–10 seconds.
+   * @param {number} durationSec  Clamped to 1–60 seconds.
    */
   function buildBeepUrl(durationSec) {
     const rate      = 8000;
@@ -84,7 +84,7 @@ const AlarmSound = (() => {
       { start: 0.23, dur: 0.15 },
       { start: 0.46, dur: 0.25 },
     ];
-    const totalSec = Math.max(1, Math.min(10, durationSec));
+    const totalSec = Math.max(1, Math.min(60, durationSec));
     const len      = Math.ceil(rate * totalSec);
     const buf      = new ArrayBuffer(44 + len * 2);
     const v        = new DataView(buf);
@@ -129,7 +129,7 @@ const AlarmSound = (() => {
    * @param {number} durationSec
    */
   function ensureAudio(durationSec) {
-    const clamped = Math.max(1, Math.min(10, durationSec));
+    const clamped = Math.max(1, Math.min(60, durationSec));
     if (clamped !== currentDur || !beepUrl || !audioEl) {
       // Clean up old resources before rebuilding
       if (audioEl) {
@@ -159,10 +159,10 @@ const AlarmSound = (() => {
   /**
    * Play the alarm beep for the given duration, then auto-stop.
    * @param {number} volume      0–100
-   * @param {number} durationSec 1–10 (seconds the buzzer should be heard)
+   * @param {number} durationSec 1–60 (seconds the buzzer should be heard)
    */
   function play(volume, durationSec) {
-    const dur = Math.max(1, Math.min(10, durationSec || 8));
+    const dur = Math.max(1, Math.min(60, durationSec || 8));
     ensureAudio(dur);
 
     // Cancel any previous auto-stop
@@ -206,9 +206,12 @@ const UI = (() => {
 
   /** Update the countdown display */
   function setTimerText(seconds) {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    timerDisplay.textContent = `${pad(m)}:${pad(s)}`;
+    timerDisplay.textContent = h > 0
+      ? `${pad(h)}:${pad(m)}:${pad(s)}`
+      : `${pad(m)}:${pad(s)}`;
   }
 
   /** Update the progress bar (0-100 %) */
@@ -239,6 +242,7 @@ const Settings = (() => {
   const STORAGE_KEY = "timerInfinitySettings";
 
   const els = {
+    durHr:         document.getElementById("dur-hr"),
     durMin:        document.getElementById("dur-min"),
     durSec:        document.getElementById("dur-sec"),
     repMin:        document.getElementById("rep-min"),
@@ -248,6 +252,7 @@ const Settings = (() => {
     soundEnabled:  document.getElementById("sound-enabled"),
     volume:        document.getElementById("volume"),
     volumeVal:     document.getElementById("volume-val"),
+    buzzDurSec:    document.getElementById("buzz-dur"),
   };
 
   /** Clamp and return integer value of an input */
@@ -258,18 +263,20 @@ const Settings = (() => {
 
   function get() {
     return {
-      durationSec:    getInt(els.durMin) * 60 + getInt(els.durSec),
+      durationSec:    getInt(els.durHr) * 3600 + getInt(els.durMin) * 60 + getInt(els.durSec),
       intervalSec:    getInt(els.repMin) * 60 + getInt(els.repSec),
       repeatCount:    getInt(els.repeatCount),
       isInfinite:     els.infiniteRepeat.checked,
       soundEnabled:   els.soundEnabled.checked,
       volume:         getInt(els.volume),
+      buzzDurSec:     getInt(els.buzzDurSec),
     };
   }
 
   function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        durHr:          els.durHr.value,
         durMin:         els.durMin.value,
         durSec:         els.durSec.value,
         repMin:         els.repMin.value,
@@ -278,6 +285,7 @@ const Settings = (() => {
         infiniteRepeat: els.infiniteRepeat.checked,
         soundEnabled:   els.soundEnabled.checked,
         volume:         els.volume.value,
+        buzzDurSec:     els.buzzDurSec.value,
       }));
     } catch (_) { /* localStorage unavailable – silently ignore */ }
   }
@@ -287,6 +295,7 @@ const Settings = (() => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const data = JSON.parse(raw);
+      if (data.durHr          !== undefined) els.durHr.value          = data.durHr;
       if (data.durMin         !== undefined) els.durMin.value         = data.durMin;
       if (data.durSec         !== undefined) els.durSec.value         = data.durSec;
       if (data.repMin         !== undefined) els.repMin.value         = data.repMin;
@@ -295,6 +304,7 @@ const Settings = (() => {
       if (data.infiniteRepeat !== undefined) els.infiniteRepeat.checked = data.infiniteRepeat;
       if (data.soundEnabled   !== undefined) els.soundEnabled.checked  = data.soundEnabled;
       if (data.volume         !== undefined) els.volume.value          = data.volume;
+      if (data.buzzDurSec     !== undefined) els.buzzDurSec.value      = data.buzzDurSec;
     } catch (_) { /* corrupt storage – silently ignore */ }
   }
 
@@ -385,6 +395,7 @@ const TimerEngine = (() => {
   let isInfinite    = false;
   let soundEnabled  = false;
   let volume        = 70;
+  let buzzDurSec    = 8;   // user-defined buzzer duration (seconds)
 
   /** Fallback repeat delay (ms) when no interval is configured */
   const DEFAULT_REPEAT_INTERVAL_MS = 5000;
@@ -412,13 +423,13 @@ const TimerEngine = (() => {
 
   /**
    * Compute how long (seconds) the buzzer should sound.
-   * Capped at min(intervalSec, 10) so the beep never bleeds into the
-   * next repeat cycle. Falls back to 8 s when no interval is configured.
+   * Uses the user-defined buzzer duration, capped to the repeat interval
+   * so the beep never bleeds into the next repeat cycle.
    */
   function buzzDuration() {
     const ivSec = Math.max(0, intervalSec);
-    if (ivSec > 0) return Math.min(ivSec, 10);
-    return 8;
+    if (ivSec > 0) return Math.min(buzzDurSec, ivSec);
+    return buzzDurSec;
   }
 
   /** Called when countdown hits zero */
@@ -461,6 +472,7 @@ const TimerEngine = (() => {
       isInfinite   = s.isInfinite;
       soundEnabled = s.soundEnabled;
       volume       = s.volume;
+      buzzDurSec   = s.buzzDurSec || 8;
 
       // Initialise AudioContext now (during user-gesture) so the
       // browser allows sound playback when the alarm fires later.

@@ -329,6 +329,11 @@ html, body {
   min-width: 34px;
 }
 
+.hint-text {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
 /* ── Control Buttons ────────────────────────────────────── */
 .controls {
   display: flex;
