@@ -236,6 +236,7 @@ const TimerEngine = (() => {
   let intervalSec  = 0;
   let timeSinceBeep = 0;  // seconds since the last beep
   let tickId       = null;
+  let overlayTimer = null;
   let state        = "idle"; // idle | running | paused | done
 
   const btnStart = document.getElementById("btn-start");
@@ -257,10 +258,15 @@ const TimerEngine = (() => {
     UI.setProgress(pct);
   }
 
-  function doBuzz() {
+  function doBuzz(type = "periodic") {
+    const durationSec =
+      type === "periodic" && intervalSec > 0
+        ? Math.min(beepDurSec, intervalSec)
+        : beepDurSec;
     UI.showBuzz();
-    Buzzer.play(beepDurSec);
-    setTimeout(() => UI.hideBuzz(), beepDurSec * 1000);
+    Buzzer.play(durationSec);
+    clearTimeout(overlayTimer);
+    overlayTimer = setTimeout(() => UI.hideBuzz(), durationSec * 1000);
     timeSinceBeep = 0;
   }
 
@@ -281,7 +287,7 @@ const TimerEngine = (() => {
       state  = "done";
       setButtons("done");
       UI.setStatus("Time's up!");
-      doBuzz();
+      doBuzz("final");
     }
   }
 
@@ -322,6 +328,8 @@ const TimerEngine = (() => {
     remainingSec = 0;
     totalSec     = 0;
     Buzzer.stop();
+    clearTimeout(overlayTimer);
+    overlayTimer = null;
     UI.hideBuzz();
     UI.setTime(0);
     UI.setProgress(0);

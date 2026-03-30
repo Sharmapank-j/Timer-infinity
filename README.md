@@ -8,6 +8,7 @@ A simple countdown timer with a selectable buzzer duration and periodic repeat i
 - **Beep Duration** — choose exactly how long the buzzer sounds each time it fires (1–60 seconds).
 - **Repeat Interval** — buzzer re-fires every N minutes/seconds during the countdown. Set to 0 for a single buzz at the end only.
 - **PWA support** — install on desktop or mobile; works offline via a cache-first service worker.
+- **Netlify-ready routing** — includes `netlify.toml` SPA-style redirect configuration.
 - **Keyboard shortcuts** — `Space` to start/pause, `R` to reset.
 - **Settings persistence** — configuration is saved to `localStorage`.
 
@@ -30,6 +31,7 @@ Timer-infinity/
 ├── script.js       # Timer logic (Buzzer, TimerEngine, UI, Settings)
 ├── manifest.json   # PWA manifest
 ├── sw.js           # Service worker (cache-first)
+├── netlify.toml    # Netlify publish/redirect configuration
 ├── favicon.svg     # App icon
 ├── LICENSE         # MIT
 └── README.md
