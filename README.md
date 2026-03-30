@@ -39,6 +39,17 @@ It is installable as a Progressive Web App (PWA) and can work offline after firs
    - **↺ Reset** to return to configured duration
    - **✕ Stop Buzzer** to stop active buzzing immediately
 
+## App UI & Functionality Preview
+
+### 1) Ready State (default interface)
+![Timer UI - Ready state](assets/screenshots/ui-ready.png)
+
+### 2) Running State (countdown in progress)
+![Timer UI - Running state](assets/screenshots/ui-running.png)
+
+### 3) Alert State (time up + buzzer overlay)
+![Timer UI - Buzzing alert state](assets/screenshots/ui-buzzing.png)
+
 ## PWA Details
 
 - `manifest.json` defines install metadata (name, icons, colors, display mode).
