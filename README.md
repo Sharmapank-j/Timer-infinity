@@ -5,14 +5,14 @@ It is installable as a Progressive Web App (PWA) and can work offline after firs
 
 ## Website / Where to Access
 
-- **Repository (main branch page):** https://github.com/Sharmapank-j/Timer-infinity
+- **Repository (main branch page):** https://github.com/Sharmapank-j/Timer-Infinity
 - **Local website (quick start):**
   1. Clone the repository.
   2. Open `index.html` directly in a modern browser, **or** serve the folder:
      - `python3 -m http.server 8000`
-  3. Visit `http://localhost:8000`
-- **Hosted website:** this project includes `netlify.toml` and is ready for Netlify deployment.  
-  Use your Netlify site URL after deployment.
+  3. If you started a local server, visit `http://localhost:8000`
+- **Hosted website:** This project includes `netlify.toml` and is ready for Netlify deployment.  
+  After deployment, access the app at your Netlify URL (for example: `https://your-site-name.netlify.app`).
 
 ## Main Features
 
